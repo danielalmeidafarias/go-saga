@@ -33,7 +33,6 @@ type UpdateUserInput struct {
 
 func (r *UserRepository) Create(input CreateUserInput) (*User, error) {
 	user := User{
-		UUID:     uuid.New(),
 		Name:     input.Name,
 		Nickname: input.Nickname,
 		Email:    input.Email,
