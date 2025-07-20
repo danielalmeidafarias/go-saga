@@ -27,17 +27,17 @@ type CreateUserInput struct {
 }
 
 type UpdateUserInput struct {
-	Nickname *string
-	Email    *string
+	Nickname *string `json:"nickname,omitempty"`
+	Email    *string `json:"email,omitempty"`
 }
 
-func (r *UserRepository) Create(input CreateUserInput) (*User, error) {
+func (r *UserRepository) Create(in CreateUserInput) (*User, error) {
 	user := User{
-		Name:     input.Name,
-		Nickname: input.Nickname,
-		Email:    input.Email,
-		Birthday: input.Birthday,
-		Passport: input.Passport,
+		Name:     in.Name,
+		Nickname: in.Nickname,
+		Email:    in.Email,
+		Birthday: in.Birthday,
+		Passport: in.Passport,
 	}
 
 	if err := r.db.Create(&user).Error; err != nil {
@@ -47,55 +47,35 @@ func (r *UserRepository) Create(input CreateUserInput) (*User, error) {
 	return &user, nil
 }
 
-func (r *UserRepository) GetOneById(id string) (*User, error) {
+func (r *UserRepository) GetOneByUUID(uuid uuid.UUID) (*User, error) {
 	var user User
 
-	if userUUID, err := uuid.Parse(id); err == nil {
-		if err := r.db.Where("uuid = ?", userUUID).First(&user).Error; err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return nil, errors.New("user not found")
-			}
-			return nil, err
+	err := r.db.Where("uuid = ?", uuid).First(&user).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("user not found")
 		}
-	} else {
-		if err := r.db.Where("id = ?", id).First(&user).Error; err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return nil, errors.New("user not found")
-			}
-			return nil, err
-		}
+		return nil, err
 	}
 
 	return &user, nil
 }
 
-func (r *UserRepository) Update(id string, input UpdateUserInput) (*User, error) {
-	user, err := r.GetOneById(id)
+func (r *UserRepository) Update(uuid uuid.UUID, in UpdateUserInput) (*User, error) {
+	user, err := r.GetOneByUUID(uuid)
 	if err != nil {
 		return nil, err
 	}
 
-	updateData := make(map[string]interface{})
-
-	if input.Nickname != nil {
-		updateData["nickname"] = *input.Nickname
-	}
-
-	if input.Email != nil {
-		updateData["email"] = *input.Email
-	}
-
-	if len(updateData) > 0 {
-		if err := r.db.Model(user).Updates(updateData).Error; err != nil {
-			return nil, err
-		}
+	if err := r.db.Model(user).Updates(in).Error; err != nil {
+		return nil, err
 	}
 
 	return user, nil
 }
 
-func (r *UserRepository) Delete(id string) error {
-	user, err := r.GetOneById(id)
+func (r *UserRepository) Delete(uuid uuid.UUID) error {
+	user, err := r.GetOneByUUID(uuid)
 	if err != nil {
 		return err
 	}
